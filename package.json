@@ -1,0 +1,42 @@
+{
+  "name": "reuse-api",
+  "version": "3.0.0",
+  "description": "Reuse API Server",
+  "main": "index.js",
+  "scripts": {
+    "migrate:create": "sequelize db:create --config config/migrations.json",
+    "migrate:up": "sequelize db:migrate --config config/migrations.json",
+    "migrate:down": "sequelize db:migrate:undo --config config/migrations.json",
+    "migrate:downAll": "sequelize db:migrate:undo:all --config config/migrations.json",
+    "migrate:make": "sequelize migration:generate --name",
+    "seed:create": "sequelize seed:generate --name",
+    "seed:all": "sequelize-cli db:seed:all --config config/migrations.json",
+    "undo:all:seed": "sequelize-cli db:seed:undo:all --config config/migrations.json",
+    "postinstall": "npx husky install && installation.sh",
+    "format:write": "prettier --write .",
+    "lint:check": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format-lint": "yarn run format:write && yarn run lint:fix"
+  },
+  "lint-staged": {},
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "author": "Reuse App",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "eslint": "^8.7.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.25.4",
+    "prettier": "^2.5.1"
+  },
+  "dependencies": {
+    "aws-sam-local": "^0.2.11",
+    "husky": "^7.0.4",
+    "lodash": "^4.17.21",
+    "pg": "^8.7.1",
+    "sequelize": "^6.13.0",
+    "sequelize-cli": "^6.4.1"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "LambdaApiRoleTest": {
+    "UseConfigFile": "YES",
+    "LOGGING_LEVEL": "debug",
+    "SiteName": "reuse1-dev",
+    "StageName": "dev"
+  },
+  "LambdaApiSystemUser": {
+    "UseConfigFile": "YES",
+    "DYNAMO_DB_TABLE_NAME": "reuse-dev-Challenge",
+    "LOGGING_LEVEL": "debug",
+    "SiteName": "reuse1-dev",
+    "StageName": "dev"
+  }
+}

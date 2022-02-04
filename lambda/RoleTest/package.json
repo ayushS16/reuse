@@ -1,0 +1,21 @@
+{
+  "name": "role-test",
+  "version": "1.0.0",
+  "description": "role-test APIs",
+  "main": "index.js",
+  "repository": {
+    "type": "git"
+  },
+  "author": "Reuse",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "code": "5.0.0"
+  },
+  "dependencies": {
+    "boom": "3.2.1",
+    "chance": "1.0.3",
+    "config": "1.21.0",
+    "lodash": "4.13.1",
+    "moment": "2.22.2"
+  }
+}

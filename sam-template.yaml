@@ -5,16 +5,11 @@ Globals:
     Environment:
       Variables:
         DbDialect: 'postgres'
-Parameters:
+
   SiteName: reuse1-dev
-    Description: The name of the site for which the stack is created.
-    Type: String
-    MinLength: '3'
-    MaxLength: '24'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_.-]*'
+    
   StageName: dev 
-    Description: The environment for the stack. E.g., test, staging or production.
-    Type: String
+   
 Resources:
   # DynamoDB tables
   DynamoDbBoxesTable:

@@ -1,0 +1,14 @@
+version: 0.2
+run-as: root
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12
+    commands:
+               - apt-get update && apt-get install -y python3-pip 
+               - pip3 install -U awscli 
+               - aws --version
+               - cd deployment
+               - sed -i -e 's/\r$//' deploy.sh
+               -  /bin/bash deploy.sh reuse1-dev dev

@@ -1,0 +1,38 @@
+FROM nikolaik/python-nodejs:latest
+WORKDIR /app
+# COPY ./ ./
+RUN curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+# RUN apt-get install python3
+RUN python --version
+RUN unzip awscli-bundle.zip
+RUN ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+RUN /usr/local/bin/aws --version
+CMD ["sh"]
+
+# How to use this file to deploy APIs in windows machine
+
+# NOTE: Docker for windows should be installed in machine
+
+# 1. Open termial on root folder
+
+# 2. Run below command to build image
+
+# docker build -t reuse/deployment .
+
+# 3. Run below command to run image
+
+# docker run -it reuse/deployment:latest sh
+# OR
+# Use below command to attach volume folder to auto sync folder data
+# docker run -it -v D:/Projects/ReuseApp/reuse-api:/app reuse/deployment:latest sh
+# NOTE: Replace {D:/Projects/ReuseApp/reuse/reuse-api} to your project root path
+
+# 4. Configure aws using "aws configure"
+
+# 5. Run below command
+
+# sed -i -e 's/\r$//' deploy.sh
+
+# 6. Deploy code using below command
+
+# ./deploy.sh reuse-dev dev

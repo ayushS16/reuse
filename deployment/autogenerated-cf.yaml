@@ -1,0 +1,282 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Globals:
+  Function:
+    Environment:
+      Variables:
+        DbDialect: postgres
+Parameters:
+  SiteName:
+    Description: The name of the site for which the stack is created.
+    Type: String
+    MinLength: '3'
+    MaxLength: '24'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_.-]*'
+  StageName:
+    Description: The environment for the stack. E.g., test, staging or production.
+    Type: String
+Resources:
+  DynamoDbBoxesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Fn::Sub: ${SiteName}-Boxes
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: N
+      - AttributeName: boxNumber
+        AttributeType: S
+      - AttributeName: boxOwner
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+      - IndexName: BoxNumberIndex
+        KeySchema:
+        - AttributeName: boxNumber
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+      - IndexName: BoxNumberAndBoxOwnerIndex
+        KeySchema:
+        - AttributeName: boxNumber
+          KeyType: HASH
+        - AttributeName: boxOwner
+          KeyType: RANGE
+        Projection:
+          ProjectionType: KEYS_ONLY
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+  LambdaApiRoleTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${SiteName}_Reuse_Server_RoleTest
+      Description: Lambda function for Role APIs
+      Handler: index.handler
+      CodeUri: s3://reuse-dev-reuse-sam-artifacts/bdacad9e2eb9575f9b8b2a84406e3757
+      Runtime: nodejs14.x
+      Environment:
+        Variables:
+          SiteName:
+            Fn::Sub: ${SiteName}
+          StageName:
+            Fn::Sub: ${StageName}
+          UseConfigFile:
+            Ref: AWS::NoValue
+          LOGGING_LEVEL: info
+      Timeout: 200
+      MemorySize: 1024
+      Role:
+        Fn::GetAtt:
+        - IAMRoleLambdaReuseApi
+        - Arn
+      Events:
+        AllResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGatewayRestApi
+            Path: /role-test/{id?}
+            Method: ANY
+  LambdaApiSystemUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${SiteName}_Reuse_Server_SystemUser
+      Description: Lambda function for SystemUser APIs
+      Handler: index.handler
+      CodeUri: s3://reuse-dev-reuse-sam-artifacts/fc6203b89dea344cb2a2c5babe39e9fc
+      Runtime: nodejs14.x
+      Environment:
+        Variables:
+          SiteName:
+            Fn::Sub: ${SiteName}
+          StageName:
+            Fn::Sub: ${StageName}
+          UseConfigFile:
+            Ref: AWS::NoValue
+          DYNAMO_DB_TABLE_NAME:
+            Ref: DynamoDbBoxesTable
+          LOGGING_LEVEL: info
+      Timeout: 200
+      MemorySize: 1024
+      Role:
+        Fn::GetAtt:
+        - IAMRoleLambdaReuseApi
+        - Arn
+      Events:
+        AllResource:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGatewayRestApi
+            Path: /system-user/{id?}
+            Method: ANY
+  ConfigRoleTestLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: LambdaApiRoleTest
+      Principal: apigateway.amazonaws.com
+  ConfigSystemUserLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: LambdaApiSystemUser
+      Principal: apigateway.amazonaws.com
+  IAMRoleLambdaReuseApi:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: ${SiteName}-Reuse-Lambda-ApiBackendRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/AmazonElastiCacheFullAccess
+      Policies:
+      - PolicyName:
+          Fn::Sub: ${SiteName}-Reuse-ApiBackendPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - secretsmanager:GetResourcePolicy
+            - secretsmanager:GetSecretValue
+            - secretsmanager:ListSecretVersionIds
+            - secretsmanager:ListSecrets
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+            Resource:
+            - Fn::GetAtt:
+              - DynamoDbBoxesTable
+              - Arn
+            - Fn::Sub: ${DynamoDbBoxesTable.Arn}/index/*
+            - Fn::Sub: arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+            - Fn::Sub: arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*
+  IAMRoleCloudWatch:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: ${SiteName}-Reuse-ApiGateway-CloudWatchRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+  ApiGatewayRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name:
+        Fn::Sub: ${SiteName}-ReuseApi
+      StageName: production
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location:
+              Fn::Sub: s3://${SiteName}-reuse-sam-artifacts/Reuse-swagger.yaml
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn:
+        Fn::GetAtt:
+        - IAMRoleCloudWatch
+        - Arn
+  ApiGatewayBadRequestResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''*'''
+      ResponseTemplates:
+        application/json: "{\n \"errorCode\": \"400\", \n \"error\": \"Bad Request\"\
+          , \n \"message\": \n { \n \"message\": \"$context.error.messageString\"\
+          ,\n \"errors\": \"$context.error.validationErrorString\",\n  \"responseType\"\
+          : \"$context.error.responseType\", \n \"resourcePath\":  \"$context.resourcePath\"\
+          \ \n} \n}"
+      ResponseType: BAD_REQUEST_BODY
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StatusCode: '400'
+  ApiGatewayMissingAuthResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''*'''
+      ResponseTemplates:
+        application/json: "{\n \"errorCode\": \"403\", \n \"error\": \"missing auth\
+          \ token\", \n \"message\": \n { \r\n \"message\": \"$context.error.messageString\"\
+          ,\n \"errors\": \"$context.error.validationErrorString\",\n \"responseType\"\
+          : \"$context.error.responseType\", \n \"resourcePath\":  \"$context.resourcePath\"\
+          \ \n} \n}"
+      ResponseType: MISSING_AUTHENTICATION_TOKEN
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StatusCode: '403'
+  ApiGatewayUnAuthorizedResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''*'''
+      ResponseTemplates:
+        application/json: "{\n \"errorCode\": \"401\", \n \"error\": \"unauthorized\"\
+          , \n \"message\": \n { \r\n \"message\": \"$context.error.messageString\"\
+          ,\n \"errors\": \"$context.error.validationErrorString\",\n \"responseType\"\
+          : \"$context.error.responseType\", \n \"resourcePath\":  \"$context.resourcePath\"\
+          \ \n} \n}"
+      ResponseType: UNAUTHORIZED
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StatusCode: '401'
+  ApiGatewayDefaultResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''*'''
+      ResponseTemplates:
+        application/json: "{\n \"errorCode\": \"500\", \n \"error\": \"Internal Server\
+          \ Error\", \n \"message\": \n { \r\n \"message\": \"$context.error.messageString\"\
+          ,\n \"errors\": \"$context.error.validationErrorString\",\n \"responseType\"\
+          : \"$context.error.responseType\", \n \"resourcePath\":  \"$context.resourcePath\"\
+          \ \n} \n}"
+      ResponseType: DEFAULT_5XX
+      RestApiId:
+        Ref: ApiGatewayRestApi
+      StatusCode: '500'

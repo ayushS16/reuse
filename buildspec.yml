@@ -6,6 +6,7 @@ phases:
     runtime-versions:
       nodejs: 12
     commands:
+               - aws --version
                - cd deployment
                - sed -i -e 's/\r$//' deploy.sh
-               -  /bin/bash deploy.sh reuse1-dev dev
+               - deploy.sh reuse1-dev dev

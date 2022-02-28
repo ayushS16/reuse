@@ -6,9 +6,6 @@ phases:
     runtime-versions:
       nodejs: 12
     commands:
-               - install -y python3-pip 
-               - pip3 install -U awscli 
-               - aws --version
                - cd deployment
                - sed -i -e 's/\r$//' deploy.sh
                -  /bin/bash deploy.sh reuse1-dev dev

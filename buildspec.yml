@@ -9,4 +9,4 @@ phases:
                - aws --version
                - cd deployment
                - sed -i -e 's/\r$//' deploy.sh
-               - ./deploy.sh
+               - bash deploy.sh
